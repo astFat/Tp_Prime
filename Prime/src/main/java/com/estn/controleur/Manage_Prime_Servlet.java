@@ -12,74 +12,70 @@ import java.time.Period;
 
 import com.estn.model.PrimeModel;
 
-@WebServlet(urlPatterns = {"/acceuil.php", "/calculer.php"})
+@WebServlet("*.php")
 public class Manage_Prime_Servlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
-    public Manage_Prime_Servlet() {}
-
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         String path = request.getServletPath();
-        System.out.print(path);
 
         if ("/acceuil.php".equals(path)) {
-            request.getRequestDispatcher("/vues/index.html").forward(request, response);
-        } 
-        else if ("/calculer.php".equals(path)) {
-            int id = Integer.parseInt(request.getParameter("id_employer"));
-            String url = "jdbc:mysql://127.0.0.1:3306/prime";
-            String user = "root";
-            String password = "root_pwd";
+            request.getRequestDispatcher("vues/index.html").forward(request, response);
+
+        } else if ("/calculer.php".equals(path)) {
+
+            int id = Integer.parseInt(request.getParameter("id_employe"));
+
+            String url_db = "jdbc:mysql://localhost:3306/prime";
+            String user_db = "root";
+            String pwd_db = "";
+
             String nom = "";
             String prenom = "";
-            Date date_emb = null;
+            java.sql.Date embauche = null;
             double salaire = 0;
 
             try {
                 Class.forName("com.mysql.cj.jdbc.Driver");
-                Connection con = DriverManager.getConnection(url, user, password);
-
-                String sql = "SELECT * FROM employer WHERE id=?";
-                PreparedStatement ps = con.prepareStatement(sql);
+                Connection connection = DriverManager.getConnection(url_db, user_db, pwd_db);
+                PreparedStatement ps = connection.prepareStatement("SELECT * FROM EMPLOYE WHERE id=?");
                 ps.setInt(1, id);
+
                 ResultSet rs = ps.executeQuery();
-
-                if (rs.next()) {
-                    nom = rs.getString("nom");
-                    prenom = rs.getString("prenom");
-                    salaire = rs.getDouble("salaire");
-                    date_emb = rs.getDate("date_emb");
+                while (rs.next()) {
+                    nom = rs.getString("NOM");
+                    prenom = rs.getString("PRENOM");
+                    salaire = rs.getDouble("SALAIRE");
+                    embauche = rs.getDate("DATE_EMBAUCHE");
                 }
-
                 rs.close();
                 ps.close();
-                con.close();
+                connection.close();
 
-                if (date_emb != null) {
-                    Period p = Period.between(date_emb.toLocalDate(), LocalDate.now());
-                    double prime = salaire + (p.getYears() * 500);
+                double prime = 0;
+                Period p = Period.between(embauche.toLocalDate(), LocalDate.now());
+                prime = salaire + (p.getYears() * 500);
 
-                    PrimeModel primeModel = new PrimeModel();
-                    primeModel.setNom(nom);
-                    primeModel.setPrenom(prenom);
-                    primeModel.setPrime(prime);
+                PrimeModel primeModel = new PrimeModel();
+                primeModel.setNom(nom);
+                primeModel.setPrenom(prenom);
+                primeModel.setPrime(prime);
 
-                    request.setAttribute("primeModel", primeModel);
-                    request.getRequestDispatcher("/vues/resultat_prime.jsp").forward(request, response);
-                } else {
-                    response.getWriter().println("Aucun employé trouvé avec cet ID.");
-                }
+                request.setAttribute("pm", primeModel);
+                request.getRequestDispatcher("/vues/resultat.jsp").forward(request, response);
 
             } catch (ClassNotFoundException | SQLException e) {
                 e.printStackTrace();
             }
-        } 
-        else {
-            request.getRequestDispatcher("/vues/404.html").forward(request, response);
+
+        } else {
+            request.getRequestDispatcher("vues/404.html").forward(request, response);
         }
     }
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         doGet(request, response);
-    }
+    }
 }
